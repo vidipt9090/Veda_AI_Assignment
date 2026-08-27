@@ -1,69 +1,128 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import Header from "@/components/Header";
+import UploadScreen from "@/components/UploadScreen";
+import MappingProgress, { ProcessingStatus } from "@/components/MappingProgress";
+import ResultsScreen from "@/components/ResultsScreen";
+import { matchAnswersToQuestions } from "@/utils/matcher";
+import { MappingResult } from "@/types";
+import { Plus } from "lucide-react";
 
 export default function Home() {
+  const [uploadState, setUploadState] = useState<"upload" | "processing" | "results">("upload");
+  const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>("uploading");
+  
+  const [answerSheetFile, setAnswerSheetFile] = useState<File | null>(null);
+  const [mappingResult, setMappingResult] = useState<MappingResult | null>(null);
+
+  const handleStartMapping = async (qPaper: File, aSheet: File) => {
+    setUploadState("processing");
+    setProcessingStatus("uploading");
+    setAnswerSheetFile(aSheet);
+    
+    try {
+      // 1. Extract Questions
+      setProcessingStatus("extracting-questions");
+      const qFormData = new FormData();
+      qFormData.append("file", qPaper);
+      qFormData.append("type", "questions");
+      
+      const qRes = await fetch("/api/extract", { method: "POST", body: qFormData });
+      if (!qRes.ok) {
+         const errData = await qRes.json();
+         throw new Error(`Failed to extract questions: ${errData.error}`);
+      }
+      const qData = await qRes.json();
+      
+      // 2. Extract Answers
+      setProcessingStatus("extracting-answers");
+      const aFormData = new FormData();
+      aFormData.append("file", aSheet);
+      aFormData.append("type", "answers");
+      
+      const aRes = await fetch("/api/extract", { method: "POST", body: aFormData });
+      if (!aRes.ok) {
+         const errData = await aRes.json();
+         throw new Error(`Failed to extract answers: ${errData.error}`);
+      }
+      const aData = await aRes.json();
+      
+      // 3. Match Answers to Questions
+      setProcessingStatus("mapping");
+      const questions = qData.questions || [];
+      const answers = aData.answer_blocks || [];
+      
+      const result = matchAnswersToQuestions(questions, answers);
+      
+      // 4. AI Evaluation
+      setProcessingStatus("evaluating");
+      try {
+        const evalRes = await fetch("/api/evaluate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ matched: result.matched })
+        });
+        
+        if (evalRes.ok) {
+           const evalData = await evalRes.json();
+           const evaluations = evalData.evaluations || {};
+           
+           result.matched = result.matched.map(pair => {
+             const pId = pair.question.sub_part ? `${pair.question.number}${pair.question.sub_part}` : pair.question.number;
+             if (evaluations[pId]) {
+                pair.evaluation = evaluations[pId];
+             }
+             return pair;
+           });
+        }
+      } catch (e) {
+        console.warn("Evaluation failed, proceeding without AI grades", e);
+      }
+      
+      setMappingResult(result);
+      
+      // 5. Ready to Display
+      setProcessingStatus("ready");
+      setTimeout(() => setUploadState("results"), 1000);
+      
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "An error occurred during extraction. Please try again.");
+      setUploadState("upload");
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="flex flex-col h-full w-full">
+      <Header 
+        actionButton={
+          uploadState === "results" ? (
+            <button 
+              onClick={() => {
+                setUploadState("upload");
+                setMappingResult(null);
+                setAnswerSheetFile(null);
+              }}
+              className="flex items-center space-x-2 bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-orange-600 transition-colors shadow-sm"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              <Plus size={16} />
+              <span>Start New Evaluation</span>
+            </button>
+          ) : undefined
+        }
+      />
+      {uploadState === "upload" && (
+        <UploadScreen onStartMapping={handleStartMapping} />
+      )}
+      {uploadState === "processing" && (
+        <div className="flex-1 flex items-center justify-center bg-zinc-100">
+           <MappingProgress currentStatus={processingStatus} />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      )}
+      {uploadState === "results" && mappingResult && answerSheetFile && (
+        <ResultsScreen mappingResult={mappingResult} answerSheetFile={answerSheetFile} />
+      )}
     </div>
   );
 }
