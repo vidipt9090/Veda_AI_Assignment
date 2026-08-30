@@ -272,23 +272,23 @@ export default function ResultsScreen({
             const mPair = mappingResult.matched.find(m => m.question.number === q.number && m.question.sub_part === q.sub_part);
             const evalRes = mPair?.evaluation;
             
-            // Score formatting
-            let scoreText = isMatched ? "2/2" : "0/2";
-            let scoreBadgeClass = "text-emerald-700 bg-emerald-50 border-emerald-200";
+            // Status & Verdict formatting (No arbitrary number out of 2)
+            let statusText = isMatched ? "Mapped" : "Unanswered";
+            let statusBadgeClass = isMatched 
+              ? "text-emerald-700 bg-emerald-50 border-emerald-200" 
+              : "text-rose-700 bg-rose-50 border-rose-200";
+
             if (evalRes) {
               if (evalRes.verdict === "correct") {
-                scoreText = "2/2";
-                scoreBadgeClass = "text-emerald-700 bg-emerald-50 border-emerald-200";
+                statusText = "Correct";
+                statusBadgeClass = "text-emerald-700 bg-emerald-50 border-emerald-200";
               } else if (evalRes.verdict === "partially_correct") {
-                scoreText = "1/2";
-                scoreBadgeClass = "text-amber-700 bg-amber-50 border-amber-200";
-              } else {
-                scoreText = "0/2";
-                scoreBadgeClass = "text-rose-700 bg-rose-50 border-rose-200";
+                statusText = "Partial";
+                statusBadgeClass = "text-amber-700 bg-amber-50 border-amber-200";
+              } else if (evalRes.verdict === "incorrect") {
+                statusText = "Incorrect";
+                statusBadgeClass = "text-rose-700 bg-rose-50 border-rose-200";
               }
-            } else if (!isMatched) {
-              scoreText = "0/2";
-              scoreBadgeClass = "text-rose-700 bg-rose-50 border-rose-200";
             }
             
             return (
@@ -307,8 +307,8 @@ export default function ResultsScreen({
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
-                      <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${scoreBadgeClass}`}>
-                        {scoreText}
+                      <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${statusBadgeClass}`}>
+                        {statusText}
                       </span>
                       <ChevronDown size={16} className={`text-zinc-400 transition-transform ${isSelected ? 'rotate-180 text-zinc-800' : ''}`} />
                     </div>

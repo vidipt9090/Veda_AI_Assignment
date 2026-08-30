@@ -101,11 +101,12 @@ export async function POST(req: NextRequest) {
       - Extract bounding boxes (bbox) normalized from 0.0 to 1.0.
       - 'page' MUST be the 1-indexed page number of the document where the question appears.`;
     } else {
-      prompt = `Extract all handwritten answers from this document. 
+      prompt = `Extract all handwritten answer blocks from this student answer sheet document. 
       Important rules:
-      - Extract bounding boxes (bbox) normalized from 0.0 to 1.0.
-      - 'page' MUST be the 1-indexed page number of the document where the answer appears.
-      - If there is a detected label (e.g., 'Q1', '11(a)'), include it in 'detected_label'.`;
+      - Multi-page answers: When an answer continues from one page to the next (e.g. from the bottom of page 1 to the top of page 2), extract each page segment as a distinct answer block with its correct page number and precise bbox. If the continued segment has a label like '1 (cont)' or no label, preserve it in detected_label.
+      - Extract precise bounding boxes (bbox) normalized from 0.0 to 1.0 covering the entire handwritten block for that answer segment.
+      - 'page' MUST be the exact 1-indexed page number of the document where that specific block appears.
+      - If there is a detected label (e.g., 'Q1', '11(a)', 'Ans 2', '1 cont'), include it in 'detected_label'. If unlabeled, leave detected_label null.`;
     }
 
     const response = await generateContentWithRotation({

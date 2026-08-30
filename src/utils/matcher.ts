@@ -37,20 +37,44 @@ export function matchAnswersToQuestions(
     return a.bbox.y_min - b.bbox.y_min;
   });
 
-  // Group contiguous unlabeled answers with the preceding labeled answer
+  // Group answers including multi-page continuations
   const groupedAnswers: ExtractedAnswer[][] = [];
   let currentGroup: ExtractedAnswer[] = [];
   
-  for (const a of sortedAnswers) {
-    if (a.detected_label && a.detected_label.trim() !== '') {
-       if (currentGroup.length > 0) groupedAnswers.push(currentGroup);
-       currentGroup = [a];
+  const isContinuationLabel = (label: string, prevLabel?: string | null): boolean => {
+    const clean = label.toLowerCase().trim();
+    if (clean.includes('cont') || clean.includes('p.t.o') || clean.includes('pto')) return true;
+    if (prevLabel && clean.length > 0) {
+      const pClean = prevLabel.toLowerCase().trim();
+      const pNum = pClean.replace(/\D/g, '');
+      const cNum = clean.replace(/\D/g, '');
+      if (pNum.length > 0 && pNum === cNum) return true;
+    }
+    return false;
+  };
+
+  for (let i = 0; i < sortedAnswers.length; i++) {
+    const a = sortedAnswers[i];
+    const prev = currentGroup.length > 0 ? currentGroup[currentGroup.length - 1] : null;
+    
+    // Check if current answer continues the previous answer block across pages or down the page
+    const isContinuation = prev && (
+      // Case 1: Explicit continuation in detected label
+      (a.detected_label && isContinuationLabel(a.detected_label, prev.detected_label)) ||
+      // Case 2: No label and appears on next page near top, or same page directly below
+      (!a.detected_label && (
+        (a.page === prev.page + 1 && a.bbox.y_min < 0.45) ||
+        (a.page === prev.page && a.bbox.y_min >= prev.bbox.y_min)
+      )) ||
+      // Case 3: Next page continuation when previous ended near bottom
+      (a.page === prev.page + 1 && prev.bbox.y_max > 0.65 && a.bbox.y_min < 0.4)
+    );
+
+    if (isContinuation && currentGroup.length > 0) {
+      currentGroup.push(a);
     } else {
-       if (currentGroup.length > 0) {
-         currentGroup.push(a);
-       } else {
-         groupedAnswers.push([a]);
-       }
+      if (currentGroup.length > 0) groupedAnswers.push(currentGroup);
+      currentGroup = [a];
     }
   }
   if (currentGroup.length > 0) groupedAnswers.push(currentGroup);
