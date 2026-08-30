@@ -1,53 +1,98 @@
 # VedaAI - Assessment Extraction & Answer Mapping
 
-This project is a web application built for the VedaAI hiring assignment. It allows teachers to upload a question paper and a student's handwritten answer sheet, automatically extracts and maps the questions to the answers, highlights the exact regions on the answer sheet, and provides AI-generated grading and feedback.
+A full-stack, responsive AI application built for the VedaAI assessment. It enables teachers to upload question papers and handwritten student answer sheets, intelligently maps answers to questions (even when out-of-order or spanning across multiple pages), renders precise canvas bounding boxes, and provides AI-powered evaluation with criteria checklists.
 
-## Features
-- **Intelligent Extraction**: Extracts questions in their printed order, treating sub-parts (e.g., 11(a) and 11(b)) as distinct entities while preserving their numbering.
-- **Answer Mapping**: Maps answers to their corresponding questions, even if they are answered out of order or span multiple pages.
-- **Unanswered & Unmapped Handling**: Identifies questions that were left blank and highlights extra scribbles/text that didn't match any specific question.
-- **Bounding Box Highlights**: Draws precise overlays over the handwritten answers directly on a high-fidelity PDF viewer canvas.
-- **AI-Powered Grading Pipeline**: Runs a secondary evaluation pipeline on matched pairs to generate a verdict (Correct, Partially Correct, Incorrect), a criteria checkmark list, and specific textual feedback.
-- **API Key Rotation**: Gracefully rotates between multiple Gemini API keys in a round-robin fashion to prevent rate limits during heavy extraction workloads.
+🔗 **Live Deployment**: [https://veda-ai-assignment-murex.vercel.app](https://veda-ai-assignment-murex.vercel.app)
 
-## Tech Stack
-- **Framework**: Next.js 14 (App Router) with React
-- **Language**: TypeScript
+---
+
+## 🌟 Key Features
+
+- **Intelligent Extraction**: Extracts questions in printed order, treating sub-parts (e.g., `11(a)`, `11(b)`) as separate distinct entities while preserving their hierarchy.
+- **Smart Multi-Page Answer Mapping**:
+  - Automatically identifies answers that continue across page boundaries (e.g. from the bottom of Page 1 to the top of Page 2).
+  - Handles explicit continuation labels (`(cont)`, `P.T.O`, `Ans 1 continued`) as well as unlabeled spatial flow.
+  - Interactive multi-part floating navigator with seamless part-stepping and manual cross-page linking fallback.
+- **Unanswered & Unmapped Handling**: Separates questions with no corresponding answers and surfaces extraneous student scribbles/text as interactive unmapped blocks.
+- **Canvas-Aligned Bounding Box Highlights**: Overlays responsive, pixel-perfect highlight boxes onto rendered PDF canvases across all zoom levels (`50%`–`300%`).
+- **AI-Powered Evaluation & Grading**: Automatically evaluates answer correctness (`Correct`, `Partial`, `Incorrect`), providing qualitative feedback and a structured checklist of grading criteria.
+- **Figma Wireframe Fidelity & Responsive Design**:
+  - **Desktop**: Floating rounded layout with collapsible icon-rail sidebar, custom DPS school branding, and dual-pane inspection.
+  - **Mobile**: Floating header, segmented tab bar (`Questions` vs. `Answer Sheet`), and custom mobile zoom defaults (`50%`).
+- **Resilient API Key Rotation & Case-Insensitive Env Loading**: Dynamically rotates through multiple Gemini API keys to gracefully navigate rate limits and quota caps.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Framework**: Next.js 14+ (App Router) with React & TypeScript
 - **Styling**: Tailwind CSS
-- **AI/LLM**: Google Gemini (`gemini-3.6-flash`) via `@google/genai` SDK
-- **PDF Rendering**: `react-pdf`
-- **Icons & UI**: `lucide-react`, `react-hot-toast`
+- **AI & Vision LLM**: Google Gemini (`gemini-3.6-flash`) with structured JSON schemas via `@google/genai`
+- **PDF Canvas Rendering**: `pdfjs-dist` / `react-pdf`
+- **Icons & Polish**: `lucide-react`, `react-hot-toast`
 
-## Approach & AI Model Used
-Our approach relies heavily on **Spatial & Structural Prompting** with a Vision LLM (`gemini-3.6-flash`). 
-Instead of traditional OCR + text-matching (which is brittle for handwriting and multi-page layouts), we feed the raw PDF pages as images to Gemini and enforce a strict JSON Schema response. 
+---
 
-1. **Question Extraction**: Gemini identifies the document structure, separates sub-parts, and returns normalized `[x_min, y_min, x_max, y_max]` bounding boxes.
-2. **Answer Extraction**: We instruct the model to transcribe handwritten blocks, guess the intended label (if present), and return bounding boxes. We include custom algorithms to spatially group contiguous unlabeled answer blocks with the preceding labeled answer to support multi-page spanning.
-3. **Mapping**: A deterministic matcher links answers to questions based on labels. Unmapped answers and unanswered questions are routed appropriately.
-4. **Evaluation**: A second LLM pass sends the matched pairs (Question Text + Answer Text) back to Gemini to reason about correctness without needing a pre-provided rubric.
+## 🧠 Architecture & Methodology
 
-## Important Assumptions & Limitations
-- **File Limits**: For extremely large exam papers (e.g., 50+ pages), the payload size to the Gemini API might exceed limits. The current implementation processes pages in a single batch, which is ideal for standard assignments.
-- **Handwriting Legibility**: The accuracy of the AI grading is inherently tied to Gemini's ability to read the handwriting. Extremely poor handwriting might result in hallucinated transcriptions and consequently, flawed grading.
-- **In-Memory Storage**: As per the constraints, there is no database. Refreshing the browser will reset the workspace.
+Rather than relying on brittle OCR pipelines, this solution utilizes **Spatial & Structural Prompting** with multimodal vision LLMs:
 
-## Running Locally
+```
+[Question Paper PDF]  ───┐
+                          ├─► [Gemini 3.6 Flash (Vision)] ──► [Extracted JSON (BBoxes + Labels)]
+[Answer Sheet PDF]    ───┘                                              │
+                                                                        ▼
+                                                        [Heuristic Spatial Matcher]
+                                                        - Label & sub-part alignment
+                                                        - Cross-page continuation grouping
+                                                        - Reading-order fallback
+                                                                        │
+                                                                        ▼
+[Interactive Results UI] ◄─── [AI Evaluation Engine] ◄── [Matched Question-Answer Pairs]
+- Canvas Bounding Box Sync
+- Multi-Part Part Stepper
+- Feedback & Criteria Checklists
+```
 
-1. Clone the repository
-2. Install dependencies:
+1. **Extraction**: Documents are processed with strict JSON Schemas returning normalized `[x_min, y_min, x_max, y_max]` bounding boxes and 1-indexed page markers.
+2. **Matching Engine**: Contiguous unlabeled text blocks and cross-page continuation blocks are intelligently grouped with their parent answers before executing multi-tier fuzzy and spatial matching against question numbers.
+3. **Evaluation**: Matched pairs are evaluated in parallel to generate educational feedback and grading criteria without requiring a pre-supplied rubric.
+
+---
+
+## 🚀 Running Locally
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/vidipt9090/Veda_AI_Assignment.git
+   cd Veda_AI_Assignment
+   ```
+
+2. **Install dependencies**:
    ```bash
    npm install
    ```
-3. Create a `.env.local` file in the root directory and add your Gemini API key(s):
+
+3. **Configure environment variables**:
+   Create a `.env.local` file in the project root:
    ```env
-   GEMINI_API_KEYS="your_api_key_1,your_api_key_2"
+   # Single key or comma-separated keys for automatic rotation:
+   GEMINI_API_KEY="your_gemini_api_key_here"
+   # or
+   GEMINI_API_KEYS="key_1,key_2,key_3"
    ```
-4. Start the development server:
+
+4. **Start the development server**:
    ```bash
    npm run dev
    ```
-5. Open [http://localhost:3000](http://localhost:3000)
+   Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Design Match
-The UI closely follows the provided Figma design, utilizing a sleek sidebar, a dual-pane layout, zoom controls for the PDF viewer, and interactive mapping state management.
+---
+
+## ☁️ Deployment on Vercel
+
+1. Push your repository to GitHub.
+2. Import the project on [Vercel](https://vercel.com).
+3. Under **Settings > Environment Variables**, add `GEMINI_API_KEY` (or `GEMINI_API_KEYS`).
+4. Click **Deploy**.
