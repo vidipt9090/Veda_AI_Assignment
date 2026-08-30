@@ -21,56 +21,58 @@ export default function UploadScreen({ onStartMapping }: { onStartMapping: (qPap
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center bg-zinc-100 p-8">
-      <div className="max-w-4xl w-full text-center mb-12">
-        <h1 className="text-3xl font-bold text-zinc-900 mb-2">
-          Upload <span className="text-orange-500 bg-orange-50 px-2 py-1 rounded">Question Paper & Answer Sheets</span>
+    <div className="flex-1 flex flex-col items-center justify-start bg-transparent p-4 md:p-8 overflow-y-auto">
+      <div className="max-w-4xl w-full text-center mt-2 mb-6">
+        <h1 className="text-[26px] md:text-[34px] leading-tight font-bold text-zinc-900 tracking-tight flex flex-wrap items-center justify-center gap-2">
+          <span>Upload</span>
+          <span className="text-[#ff5924] bg-[#fff1ec] px-3.5 py-1 rounded-2xl">
+            Question Paper & Answer Sheets
+          </span>
         </h1>
-        <p className="text-zinc-500">Upload both files to get started</p>
+        <p className="text-zinc-500 text-sm mt-3 font-medium">Upload both files to get started</p>
       </div>
 
-      <div className="w-32 h-32 mb-12 relative">
-        <div className="absolute inset-0 bg-orange-100 rounded-full animate-pulse opacity-50"></div>
-        <div className="absolute inset-4 bg-orange-200 rounded-full flex items-center justify-center">
-           <div className="text-4xl">👩‍🏫</div>
+      <div className="w-36 h-36 mb-6 relative flex-shrink-0 flex items-center justify-center">
+        <img 
+          src="/teacher.png" 
+          alt="Teacher Avatar" 
+          className="w-full h-full object-contain pointer-events-none select-none" 
+        />
+      </div>
+
+      <div className="bg-white/90 backdrop-blur-sm p-4 md:p-6 rounded-[2.5rem] w-full max-w-4xl mb-8 shadow-[0_10px_30px_rgba(0,0,0,0.03)] border border-white/80">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <DropZone 
+            title="Question Paper" 
+            file={questionPaper} 
+            onDrop={(e) => handleDrop(e, setQuestionPaper)} 
+            onDragOver={handleDragOver}
+            onRemove={() => setQuestionPaper(null)}
+          />
+          <DropZone 
+            title="Answer Sheet" 
+            file={answerSheet} 
+            onDrop={(e) => handleDrop(e, setAnswerSheet)} 
+            onDragOver={handleDragOver}
+            onRemove={() => setAnswerSheet(null)}
+          />
         </div>
-        {/* Decorative dots */}
-        <div className="absolute top-0 right-4 w-3 h-3 bg-orange-400 rounded-full"></div>
-        <div className="absolute bottom-4 left-0 w-2 h-2 bg-orange-400 rounded-full"></div>
-        <div className="absolute top-1/2 -right-2 w-2 h-2 bg-orange-400 rounded-full"></div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl mb-12">
-        <DropZone 
-          title="Question Paper" 
-          file={questionPaper} 
-          onDrop={(e) => handleDrop(e, setQuestionPaper)} 
-          onDragOver={handleDragOver}
-          onRemove={() => setQuestionPaper(null)}
-        />
-        <DropZone 
-          title="Answer Sheet" 
-          file={answerSheet} 
-          onDrop={(e) => handleDrop(e, setAnswerSheet)} 
-          onDragOver={handleDragOver}
-          onRemove={() => setAnswerSheet(null)}
-        />
-      </div>
-
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col items-center pb-8">
         <button
           disabled={!questionPaper || !answerSheet}
           onClick={() => questionPaper && answerSheet && onStartMapping(questionPaper, answerSheet)}
-          className={`flex items-center space-x-2 px-8 py-3 rounded-full font-medium transition-all ${
+          className={`flex items-center space-x-2 px-8 py-3.5 rounded-full font-medium transition-all ${
             questionPaper && answerSheet 
               ? "bg-zinc-900 text-white shadow-lg hover:bg-zinc-800" 
-              : "bg-zinc-300 text-zinc-500 cursor-not-allowed"
+              : "bg-zinc-300 text-white shadow-sm cursor-not-allowed"
           }`}
         >
           <span>Start Mapping</span>
           <span>→</span>
         </button>
-        <p className="mt-4 text-sm text-zinc-400">
+        <p className="mt-6 text-[13px] text-zinc-500 text-center max-w-[260px]">
           Once both files are uploaded, you'll be able to map answers with questions
         </p>
       </div>
@@ -95,45 +97,43 @@ function DropZone({
     <div 
       onDrop={onDrop}
       onDragOver={onDragOver}
-      className={`relative flex flex-col items-center justify-center p-8 bg-white border-2 border-dashed rounded-2xl h-48 transition-colors ${
+      className={`relative flex flex-col items-center justify-center p-6 bg-white border-2 border-dashed rounded-3xl h-36 md:h-48 transition-colors ${
         file ? "border-zinc-200" : "border-zinc-300 hover:border-orange-400"
       }`}
     >
       {file ? (
-        <div className="flex items-center space-x-4 bg-zinc-50 p-4 rounded-lg w-full">
-          <div className="bg-red-100 text-red-500 p-2 rounded">
+        <div className="flex items-center space-x-3 bg-zinc-50 p-3 rounded-xl w-full">
+          <div className="bg-red-100 text-red-500 p-2 rounded-lg">
              <FileIcon />
           </div>
           <div className="flex-1 text-left overflow-hidden">
-            <p className="font-medium text-sm truncate" title={file.name}>{file.name}</p>
+            <p className="font-medium text-sm truncate text-zinc-800" title={file.name}>{file.name}</p>
             <p className="text-xs text-zinc-500">
               {(file.size / (1024 * 1024)).toFixed(1)}MB
             </p>
           </div>
           <button 
             onClick={onRemove}
-            className="p-1 bg-zinc-200 rounded-full hover:bg-zinc-300 text-zinc-600 absolute -top-3 -right-3"
+            className="p-1.5 bg-zinc-200 rounded-full hover:bg-zinc-300 text-zinc-600 absolute -top-2 -right-2 shadow-sm"
           >
-            <X size={16} />
+            <X size={14} />
           </button>
         </div>
       ) : (
         <>
-          <div className="mb-4 text-zinc-400">
-            <Upload size={24} />
+          <div className="mb-3 bg-zinc-100 p-2.5 rounded-xl text-zinc-600">
+            <Upload size={20} />
           </div>
-          <p className="font-medium text-zinc-900">
+          <p className="font-semibold text-zinc-900 text-sm">
             Upload <span className="text-orange-500">{title}</span>
           </p>
-          <p className="text-xs text-zinc-400 mt-1">Max 10MB</p>
+          <p className="text-[11px] text-zinc-400 mt-1 font-medium">Max 10MB</p>
           <input 
             type="file" 
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             accept=".pdf,.png,.jpg,.jpeg"
             onChange={(e) => {
               if (e.target.files && e.target.files.length > 0) {
-                // Not ideal for setting file directly in a real app (better use a ref), 
-                // but this works for demo dropzone
                 const ev = {
                   preventDefault: () => {},
                   dataTransfer: { files: e.target.files }

@@ -27,7 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-zinc-100 flex text-zinc-900`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gradient-to-b from-[#fbfbfb] via-[#eff1f5] to-[#d8dce4] min-h-screen flex text-zinc-900`}
         suppressHydrationWarning
       >
         <Sidebar />

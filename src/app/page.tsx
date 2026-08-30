@@ -96,6 +96,13 @@ export default function Home() {
   return (
     <div className="flex flex-col h-full w-full">
       <Header 
+        onBack={
+          uploadState === "results" ? () => {
+            setUploadState("upload");
+            setMappingResult(null);
+            setAnswerSheetFile(null);
+          } : undefined
+        }
         actionButton={
           uploadState === "results" ? (
             <button 
