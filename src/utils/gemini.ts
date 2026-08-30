@@ -6,17 +6,14 @@ const instances: Record<string, GoogleGenAI> = {};
 function getKeys(): string[] {
   const keys: string[] = [];
   
-  // Backwards compatibility with single key
-  if (process.env.GEMINI_API_KEY) {
-    keys.push(process.env.GEMINI_API_KEY.trim());
-  }
-  
-  // Parse comma-separated keys
-  if (process.env.GEMINI_API_KEYS) {
-    const multiKeys = process.env.GEMINI_API_KEYS.split(',').map(k => k.trim()).filter(k => k.length > 0);
-    for (const key of multiKeys) {
-      if (!keys.includes(key)) {
-        keys.push(key);
+  // Scan all process.env variables for any variation of gemini_api_key / gemini_api_keys case-insensitively
+  for (const [k, v] of Object.entries(process.env)) {
+    if (v && typeof v === 'string' && k.toLowerCase().startsWith('gemini_api_key')) {
+      const splitKeys = v.split(',').map(x => x.trim()).filter(x => x.length > 0);
+      for (const item of splitKeys) {
+        if (!keys.includes(item)) {
+          keys.push(item);
+        }
       }
     }
   }
